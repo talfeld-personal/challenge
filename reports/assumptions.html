@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analysis Assumptions</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #555;
+            margin-top: 30px;
+        }
+        p {
+            margin-bottom: 15px;
+        }
+        ul {
+            margin: 10px 0;
+        }
+        li {
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Payment Processing Analysis - Key Assumptions</h1>
+    
+    <h2>1. January Data Exclusion</h2>
+    <p><strong>Assumption:</strong> January represents the company's launch period and should be excluded from the main analysis.</p>
+    <p><strong>Why:</strong></p>
+    <ul>
+        <li>Very small transaction amounts (likely test transactions or contractor payments)</li>
+        <li>All chargebacks occurred in January, suggesting early customer issues</li>
+        <li>Customers may not have been fully legitimate during launch phase</li>
+        <li>No chargebacks after January indicates stabilization</li>
+    </ul>
+    <p><strong>Impact:</strong> Analysis focuses on February-June operational data. Since the main decline is in June, removing January doesn't affect the core problem investigation.</p>
+    
+    <h2>2. Card-on-File Transaction Model</h2>
+    <p><strong>Assumption:</strong> Most transactions are card-on-file (saved payment methods) rather than manual card entry.</p>
+    <p><strong>Why:</strong></p>
+    <ul>
+        <li>CVV data is missing for the vast majority of transactions</li>
+        <li>CVV is typically required for manual card entry</li>
+        <li>Absence suggests automated/programmatic payment processing</li>
+    </ul>
+    <p><strong>Impact:</strong> CVV analysis is excluded since it's not applicable to this transaction model.</p>
+</body>
+</html>

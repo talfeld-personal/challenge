@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Processing Deep-Dive Analysis</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 3px solid #e74c3c;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            font-size: 2.2em;
+        }
+        h2 {
+            color: #34495e;
+            margin-top: 35px;
+            margin-bottom: 20px;
+            border-left: 4px solid #3498db;
+            padding-left: 15px;
+            font-size: 1.5em;
+        }
+        h3 {
+            color: #5a6c7d;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+        h4 {
+            color: #6c757d;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+        .executive-summary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        .key-finding {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+        .critical-issue {
+            background-color: #f8d7da;
+            border-left: 4px solid #dc3545;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+        .insight-box {
+            background-color: #d1ecf1;
+            border-left: 4px solid #17a2b8;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .metric-card {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid #e9ecef;
+        }
+        .metric-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #495057;
+            margin-bottom: 5px;
+        }
+        .metric-label {
+            font-size: 0.9em;
+            color: #6c757d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .metric-critical {
+            border-left: 4px solid #dc3545;
+            background-color: #fff5f5;
+        }
+        .metric-warning {
+            border-left: 4px solid #ffc107;
+            background-color: #fffdf0;
+        }
+        .metric-good {
+            border-left: 4px solid #28a745;
+            background-color: #f0fff4;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            font-size: 0.9em;
+            background-color: white;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+            color: #495057;
+        }
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+        .country-us { background-color: #ffebee !important; }
+        .country-fr { background-color: #fff3e0 !important; }
+        .country-good { background-color: #e8f5e8 !important; }
+        .chart-container {
+            text-align: center;
+            margin: 25px 0;
+            padding: 20px;
+            background-color: #fafafa;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+        .chart-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+        .chart-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .week-progression {
+            background: linear-gradient(90deg, #dc3545 0%, #fd7e14 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        .geographic-impact {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin: 15px 0;
+        }
+        .impact-card {
+            padding: 15px;
+            border-radius: 6px;
+            text-align: center;
+            font-weight: bold;
+        }
+        .impact-critical { background-color: #dc3545; color: white; }
+        .impact-high { background-color: #fd7e14; color: white; }
+        .impact-moderate { background-color: #ffc107; color: black; }
+        .impact-stable { background-color: #28a745; color: white; }
+        .business-hours-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .business-hours-card {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #6c757d;
+        }
+        .business-advantage { border-left-color: #28a745; }
+        .business-disadvantage { border-left-color: #dc3545; }
+        .section-divider {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            margin: 35px 0;
+        }
+        .analysis-period {
+            background-color: #e3f2fd;
+            padding: 15px;
+            border-left: 4px solid #2196f3;
+            margin-bottom: 25px;
+            font-size: 0.95em;
+        }
+        .currency-trends {
+            background-color: #f3e5f5;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .discovery-highlight {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ffa500 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+        ul, ol {
+            margin-left: 20px;
+        }
+        li {
+            margin-bottom: 8px;
+        }
+        .pattern-list {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 10px 0;
+        }
+        .performance-indicator {
+            font-weight: bold;
+        }
+        .decline { color: #dc3545; }
+        .stable { color: #6c757d; }
+        .improve { color: #28a745; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Payment Processing Deep-Dive Analysis</h1>
+        <h2>Comprehensive Multi-Dimensional Performance Investigation</h2>
+        
+        <div class="analysis-period">
+            <strong>Analysis Period:</strong> February - June 2019<br>
+            <strong>Data Source:</strong> Globepay Processing Records<br>
+            <strong>Analysis Scope:</strong> 4,500 transactions, $417.9M USD total volume<br>
+            <strong>Analysis Type:</strong> Geographic, Currency, Temporal, and Infrastructure Pattern Analysis
+        </div>
+
+        <div class="executive-summary">
+            <h3 style="color: white; margin-top: 0;">Executive Dashboard - June Performance Decline</h3>
+            <div class="metric-grid">
+                <div class="metric-card">
+                    <div class="metric-value">7.6 pts</div>
+                    <div class="metric-label" style="color: #333;">June Decline (3 weeks)</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">FR: -10 pts</div>
+                    <div class="metric-label" style="color: #333;">Secondary Critical Market</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">US: -18 pts</div>
+                    <div class="metric-label" style="color: #333;">Most Critical Market</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">URGENT</div>
+                    <div class="metric-label" style="color: #333;">Action Required</div>
+                </div>
+            </div>
+        </div>
+
+
+        <div class="key-finding">
+            <h4>Primary Analysis Conclusions</h4>
+            <ul>
+                <li><strong>Multi-dimensional patterns identified:</strong> Performance variations observed across geography, currency, and time dimensions</li>
+                <li><strong>June systematic decline:</strong> 7.6 percentage point degradation from Week 1 to Week 4, concentrated in specific hours</li>
+                <li><strong>Business hours performance variation:</strong> Acceptance rates differ significantly between local business hours and after-hours periods</li>
+                <li><strong>Currency exchange rate correlation:</strong> CAD and EUR show declining acceptance rates alongside exchange rate movements</li>
+                <li><strong>Geographic concentration observed:</strong> US and France account for majority of June decline patterns</li>
+            </ul>
+        </div>
+
+        <hr class="section-divider">
+
+        <h2>1. Performance Evolution - Monthly Trends</h2>
+
+        <div class="chart-container">
+            <div class="chart-title">Monthly Performance Overview</div>
+            <img src="../graphs/01_monthly_acceptance_rate_trend.png" alt="Monthly Acceptance Rate Trend" style="width:100%; max-width:800px; height:auto;">
+        </div>
+
+        <h3>Monthly Performance Summary</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Month</th>
+                    <th>Total Transactions</th>
+                    <th>Acceptance Rate</th>
+                    <th>Total Volume (USD)</th>
+                    <th>Declined Volume (USD)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="country-good">
+                    <td><strong>Feb 2019</strong></td>
+                    <td>840</td>
+                    <td><strong>70.1%</strong></td>
+                    <td>$30,189,250</td>
+                    <td>$8,884,945</td>
+                </tr>
+                <tr>
+                    <td><strong>Mar 2019</strong></td>
+                    <td>930</td>
+                    <td><strong>68.9%</strong></td>
+                    <td>$57,246,161</td>
+                    <td>$17,683,123</td>
+                </tr>
+                <tr class="country-us">
+                    <td><strong>Apr 2019</strong></td>
+                    <td>900</td>
+                    <td><strong>67.8%</strong></td>
+                    <td>$80,801,970</td>
+                    <td>$25,441,780</td>
+                </tr>
+                <tr>
+                    <td><strong>May 2019</strong></td>
+                    <td>930</td>
+                    <td><strong>69.4%</strong></td>
+                    <td>$113,257,926</td>
+                    <td>$35,394,007</td>
+                </tr>
+                <tr>
+                    <td><strong>Jun 2019</strong></td>
+                    <td>900</td>
+                    <td><strong>71.7%</strong></td>
+                    <td>$136,361,037</td>
+                    <td>$39,612,571</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="chart-grid">
+            <div class="chart-container">
+                <div class="chart-title">Monthly Declined Volume</div>
+                <img src="../graphs/03_monthly_declined_volume.png" alt="Monthly Declined Volume" style="width:100%; max-width:600px; height:auto;">
+            </div>
+            <div class="chart-container">
+                <div class="chart-title">Monthly Transaction Count</div>
+                <img src="../graphs/04_monthly_transaction_count.png" alt="Monthly Transaction Count" style="width:100%; max-width:600px; height:auto;">
+            </div>
+        </div>
+
+        <hr class="section-divider">
+
+        <h2>2. Geographic Performance Analysis</h2>
+
+        <div class="chart-container">
+            <div class="chart-title">Country Acceptance Rates</div>
+            <img src="../graphs/05_country_acceptance_rates.png" alt="Country Acceptance Rates" style="width:100%; max-width:800px; height:auto;">
+        </div>
+
+        <h3>Country Performance Details</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Country</th>
+                    <th>Total Transactions</th>
+                    <th>Acceptance Rate</th>
+                    <th>Total Volume (USD)</th>
+                    <th>Volume Share</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>US</strong></td>
+                    <td>750</td>
+                    <td><strong>67.7%</strong></td>
+                    <td>$173,991,621</td>
+                    <td>41.6%</td>
+                </tr>
+                <tr>
+                    <td><strong>FR</strong></td>
+                    <td>750</td>
+                    <td><strong>70.5%</strong></td>
+                    <td>$102,547,940</td>
+                    <td>24.5%</td>
+                </tr>
+                <tr class="country-good">
+                    <td><strong>UK</strong></td>
+                    <td>750</td>
+                    <td><strong>72.0%</strong></td>
+                    <td>$102,999,605</td>
+                    <td>24.7%</td>
+                </tr>
+                <tr>
+                    <td><strong>CA</strong></td>
+                    <td>750</td>
+                    <td><strong>68.5%</strong></td>
+                    <td>$56,019,542</td>
+                    <td>13.4%</td>
+                </tr>
+                <tr>
+                    <td><strong>MX</strong></td>
+                    <td>750</td>
+                    <td><strong>70.5%</strong></td>
+                    <td>$2,999,047</td>
+                    <td>0.7%</td>
+                </tr>
+                <tr>
+                    <td><strong>AE</strong></td>
+                    <td>750</td>
+                    <td><strong>68.4%</strong></td>
+                    <td>$80,297,415</td>
+                    <td>19.2%</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="key-finding">
+            <strong>Geographic Insights:</strong>
+            <ul>
+                <li><strong>Best performing country:</strong> UK (72.0%)</li>
+                <li><strong>Worst performing country:</strong> US (67.7%)</li>
+                <li><strong>Geographic performance range:</strong> 4.3 percentage points</li>
+                <li><strong>High-volume problem areas:</strong> US (41.6% of volume, 67.7% acceptance)</li>
+            </ul>
+        </div>
+
+        <hr class="section-divider">
+
+        <h2>3. Currency Performance & Exchange Rate Analysis</h2>
+
+        <h3>Currency Performance Overview</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Currency</th>
+                    <th>Total Transactions</th>
+                    <th>Acceptance Rate</th>
+                    <th>Total Volume (USD)</th>
+                    <th>Volume Share</th>
+                    <th>Exchange Rate Volatility</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>USD</strong></td>
+                    <td>1,650</td>
+                    <td><strong>68.0%</strong></td>
+                    <td>$254,288,036</td>
+                    <td>60.8%</td>
+                    <td>Baseline (1.0)</td>
+                </tr>
+                <tr style="background-color: #fff3e0;">
+                    <td><strong>EUR</strong></td>
+                    <td>900</td>
+                    <td><strong>70.4%</strong></td>
+                    <td>$102,547,940</td>
+                    <td>24.5%</td>
+                    <td><strong>High (-21.2%)</strong></td>
+                </tr>
+                <tr class="country-good">
+                    <td><strong>GBP</strong></td>
+                    <td>750</td>
+                    <td><strong>72.0%</strong></td>
+                    <td>$102,999,605</td>
+                    <td>24.7%</td>
+                    <td>Minimal</td>
+                </tr>
+                <tr style="background-color: #fff3e0;">
+                    <td><strong>CAD</strong></td>
+                    <td>750</td>
+                    <td><strong>68.5%</strong></td>
+                    <td>$56,019,542</td>
+                    <td>13.4%</td>
+                    <td><strong>Low (-2.6%)</strong></td>
+                </tr>
+                <tr>
+                    <td><strong>MXN</strong></td>
+                    <td>450</td>
+                    <td><strong>69.3%</strong></td>
+                    <td>$2,001,222</td>
+                    <td>0.5%</td>
+                    <td>High</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="chart-grid">
+            <div class="chart-container">
+                <div class="chart-title">Currency Performance Trends Over Time</div>
+                <img src="../graphs/07_country_performance_trends.png" alt="Currency Performance Trends" style="width:100%; max-width:600px; height:auto;">
+            </div>
+            <div class="chart-container">
+                <div class="chart-title">Exchange Rate Trends - EUR, CAD, GBP</div>
+                <img src="../graphs/17_exchange_rate_trends_major.png" alt="Exchange Rate Trends" style="width:100%; max-width:600px; height:auto;">
+            </div>
+        </div>
+
+
+        <div class="critical-issue">
+            <h4>Key Currency Processing Discoveries</h4>
+            <p><strong>Exchange Rate Volatility and Processing Performance Patterns:</strong></p>
+            <ul>
+                <li><strong>EUR High Volatility Impact:</strong> -21.2% exchange rate change observed alongside processing performance variations</li>
+                <li><strong>CAD Systematic Decline:</strong> Consistent decline in both exchange rates (-2.6%) and acceptance rates (68.5%)</li>
+                <li><strong>GBP Stability Pattern:</strong> Most stable exchange rates correspond to highest acceptance rates (72.0%)</li>
+                <li><strong>USD High-Volume Underperformance:</strong> 60.8% of volume shows 68.0% acceptance rate despite baseline exchange rate</li>
+            </ul>
+        </div>
+
+        <hr class="section-divider">
+
+        <h2>4. Business Hours & Temporal Analysis</h2>
+
+        <h3>Time Zone Configuration</h3>
+        <div class="pattern-list">
+            <ul>
+                <li><strong>US:</strong> UTC-5 (Eastern Time)</li>
+                <li><strong>CA:</strong> UTC-5 (Eastern Canada)</li>
+                <li><strong>UK:</strong> UTC+0 (GMT/UTC)</li>
+                <li><strong>FR:</strong> UTC+1 (CET)</li>
+                <li><strong>MX:</strong> UTC-6 (Central Mexico)</li>
+                <li><strong>AE:</strong> UTC+4 (Gulf Standard Time)</li>
+            </ul>
+        </div>
+
+        <div class="chart-container">
+            <div class="chart-title">Business vs After Hours Performance Comparison</div>
+            <img src="../graphs/14_business_vs_after_hours.png" alt="Business vs After Hours Performance" style="width:100%; max-width:800px; height:auto;">
+        </div>
+
+        <h3>Business Hours Performance (9 AM - 5 PM Local Time)</h3>
+        <div class="business-hours-grid">
+            <div class="business-hours-card business-advantage">
+                <h4>US</h4>
+                <p><strong>Business hours:</strong> 300 txns, 70.7% acceptance</p>
+                <p><strong>After hours:</strong> 450 txns, 65.1% acceptance</p>
+                <p><strong>Advantage:</strong> <span class="improve">+5.6 percentage points</span></p>
+            </div>
+            
+            <div class="business-hours-card business-advantage">
+                <h4>CA</h4>
+                <p><strong>Business hours:</strong> 300 txns, 72.3% acceptance</p>
+                <p><strong>After hours:</strong> 450 txns, 66.0% acceptance</p>
+                <p><strong>Advantage:</strong> <span class="improve">+6.3 percentage points</span></p>
+            </div>
+            
+            <div class="business-hours-card">
+                <h4>UK</h4>
+                <p><strong>Business hours:</strong> 300 txns, 73.0% acceptance</p>
+                <p><strong>After hours:</strong> 450 txns, 71.3% acceptance</p>
+                <p><strong>Advantage:</strong> <span class="stable">+1.7 percentage points</span></p>
+            </div>
+            
+            <div class="business-hours-card business-disadvantage">
+                <h4>FR</h4>
+                <p><strong>Business hours:</strong> 300 txns, 70.0% acceptance</p>
+                <p><strong>After hours:</strong> 450 txns, 70.9% acceptance</p>
+                <p><strong>Disadvantage:</strong> <span class="decline">-0.9 percentage points</span></p>
+            </div>
+            
+            <div class="business-hours-card business-disadvantage">
+                <h4>MX</h4>
+                <p><strong>Business hours:</strong> 150 txns, 68.0% acceptance</p>
+                <p><strong>After hours:</strong> 600 txns, 71.2% acceptance</p>
+                <p><strong>Disadvantage:</strong> <span class="decline">-3.2 percentage points</span></p>
+            </div>
+            
+            <div class="business-hours-card">
+                <h4>AE</h4>
+                <p><strong>Business hours:</strong> 150 txns, 69.3% acceptance</p>
+                <p><strong>After hours:</strong> 600 txns, 68.2% acceptance</p>
+                <p><strong>Advantage:</strong> <span class="stable">+1.2 percentage points</span></p>
+            </div>
+        </div>
+
+        <div class="insight-box">
+            <strong>Business Hours & Temporal Analysis Insights:</strong>
+            <ul>
+                <li><strong>Better during business hours:</strong> US (+5.6%), CA (+6.3%)</li>
+                <li><strong>Better during after hours:</strong> MX (-3.2%), FR (-0.9%)</li>
+                <li><strong>Local time processing patterns:</strong> Clear timezone effects on performance</li>
+                <li><strong>Day of week variation:</strong> Relatively stable across all days (±0.5 percentage points)</li>
+                <li><strong>Weekend performance:</strong> No significant degradation during weekends</li>
+                <li><strong>Hourly patterns:</strong> Performance varies by local business hours in each region</li>
+                <li><strong>Weekly volatility:</strong> Low baseline volatility confirms June decline is anomalous</li>
+            </ul>
+        </div>
+
+        <hr class="section-divider">
+
+        <h2>5. Critical Discovery: June Performance Decline Investigation</h2>
+
+        <div class="key-finding">
+            <h4>June Performance Investigation</h4>
+            <p>Systematic weekly decline pattern identified with significant geographic concentration</p>
+        </div>
+
+        <div class="chart-container">
+            <div class="chart-title">June Weekly Decline Pattern</div>
+            <img src="../graphs/19_june_weekly_decline_pattern.png" alt="June Weekly Decline Pattern" style="width:100%; max-width:800px; height:auto;">
+        </div>
+
+        <h3>June Weekly Progression</h3>
+        <div class="pattern-list">
+            <h4>June Weekly Performance Decline</h4>
+            <ul>
+                <li><strong>Week 1 (Jun 1-7):</strong> 75.7% acceptance (210 transactions)</li>
+                <li><strong>Week 2 (Jun 8-14):</strong> 73.8% acceptance (210 transactions)</li>
+                <li><strong>Week 3 (Jun 15-21):</strong> 70.0% acceptance (210 transactions)</li>
+                <li><strong>Week 4 (Jun 22-30):</strong> 68.1% acceptance (270 transactions)</li>
+            </ul>
+        </div>
+
+        <div class="critical-issue">
+            <h4>June Decline Metrics</h4>
+            <ul>
+                <li><strong>Total decline:</strong> Week 1 → Week 4: 75.7% → 68.1% = <span class="decline">7.6 percentage points</span></li>
+                <li><strong>Weekly volatility:</strong> 3.5 percentage points</li>
+                <li><strong>Pattern type:</strong> Systematic deterioration accelerating from Week 2</li>
+            </ul>
+        </div>
+
+        <div class="chart-container">
+            <div class="chart-title">June Country Performance: Problem vs Stable</div>
+            <img src="../graphs/21_june_country_problem_vs_stable.png" alt="June Country Problem vs Stable" style="width:100%; max-width:800px; height:auto;">
+        </div>
+
+        <h3>Geographic Impact Analysis (Early vs Late June)</h3>
+        
+        <div class="chart-container">
+            <div class="chart-title">Geographic Concentration of June Decline</div>
+            <img src="../graphs/20_june_geographic_concentration.png" alt="Geographic Concentration of June Decline" style="width:100%; max-width:800px; height:auto;">
+        </div>
+
+        <table style="margin: 20px 0;">
+            <thead>
+                <tr>
+                    <th>Country</th>
+                    <th>Early June Rate</th>
+                    <th>Late June Rate</th>
+                    <th>Change (pts)</th>
+                    <th>Impact Level</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr style="background-color: #ffebee;">
+                    <td><strong>US</strong></td>
+                    <td>78%</td>
+                    <td>60%</td>
+                    <td>+18.0pts</td>
+                    <td>Critical</td>
+                </tr>
+                <tr style="background-color: #fff3e0;">
+                    <td><strong>FR</strong></td>
+                    <td>74%</td>
+                    <td>64%</td>
+                    <td>+10.0pts</td>
+                    <td>High</td>
+                </tr>
+                <tr style="background-color: #fffdf0;">
+                    <td><strong>UK</strong></td>
+                    <td>80%</td>
+                    <td>74%</td>
+                    <td>+6.0pts</td>
+                    <td>Moderate</td>
+                </tr>
+                <tr style="background-color: #fffdf0;">
+                    <td><strong>MX</strong></td>
+                    <td>78%</td>
+                    <td>74%</td>
+                    <td>+4.0pts</td>
+                    <td>Moderate</td>
+                </tr>
+                <tr style="background-color: #f0fff4;">
+                    <td><strong>CA</strong></td>
+                    <td>68%</td>
+                    <td>70%</td>
+                    <td>-2.0pts</td>
+                    <td>Stable</td>
+                </tr>
+                <tr style="background-color: #f0fff4;">
+                    <td><strong>AE</strong></td>
+                    <td>68%</td>
+                    <td>72%</td>
+                    <td>-4.0pts</td>
+                    <td>Stable</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="key-finding">
+            <h4>Key June Discoveries</h4>
+            <ul>
+                <li><strong>Geographic concentration:</strong> US & France drive 74% of total decline impact</li>
+                <li><strong>Systematic pattern:</strong> Decline shows consistent progression rather than random variation</li>
+                <li><strong>Country-specific impact:</strong> June decline affects specific countries disproportionately</li>
+            </ul>
+        </div>
+
+        <h3>Critical Discovery: Hourly Patterns in June Decline</h3>
+        
+        <div class="insight-box">
+            <h4>Hourly Analysis: Time-of-Day Patterns</h4>
+            <p>The June decline is not uniform across all hours but concentrated in specific time periods at the hourly level.</p>
+        </div>
+
+        <div class="chart-container">
+            <div class="chart-title">June 2019 Weekly Acceptance Rate Heatmaps by Country and Hour</div>
+            <img src="../graphs/27_june_weekly_acceptance_rate_heatmaps.png" alt="June Weekly Acceptance Rate Heatmaps" style="width:100%; max-width:1000px; height:auto;">
+        </div>
+
+        <div class="critical-issue">
+            <h4>Hourly Performance Degradation Patterns</h4>
+            <p><strong>Time-Specific Vulnerabilities Identified:</strong></p>
+            <ul>
+                <li><strong>US Critical Hours:</strong> Major issues around 00:00 and around 04:00 show severe degradation (Week 1: 75-80% → Week 4: 40-60%)</li>
+                <li><strong>France Problematic Windows:</strong> Major issues around 02:00 and around 23:00 experience concentrated drops (Week 1: 70-75% → Week 4: 50-65%)</li>
+                <li><strong>Progressive Deterioration:</strong> Specific hour/country combinations show 15-35 percentage point declines over 3 weeks</li>
+            </ul>
+        </div>
+
+
+        <div class="pattern-list">
+            <h4>🔍 Specific Hourly Pattern Observations:</h4>
+            <ul>
+                <li><strong>Time-of-Day Clustering:</strong> Problems concentrated in specific hourly windows rather than random distribution</li>
+                <li><strong>Infrastructure Implication:</strong> Hourly concentration suggests processing infrastructure stress during specific operational periods</li>
+            </ul>
+        </div>
+
+        <hr class="section-divider">
+
+        <h2>6. Overall Performance Patterns</h2>
+
+        <h3>Problem Patterns Identified</h3>
+        <div class="pattern-list">
+            <h4>🚨 Critical June Discovery:</h4>
+            <ul>
+                <li><strong>US hourly concentration:</strong> June decline concentrated in specific hours, not uniform across the day</li>
+                <li><strong>FR time-based patterns:</strong> Similar hourly clustering observed in France during June decline period</li>
+                <li><strong>Time-of-day vulnerabilities:</strong> Processing issues emerge during particular operational windows</li>
+                <li><strong>Geographic concentration:</strong> US/France drive majority of June decline through hourly-specific degradation</li>
+            </ul>
+        </div>
+
+        <div class="pattern-list">
+            <h4>⏰ Business Hours Processing Issues:</h4>
+            <ul>
+                <li><strong>Cross-timezone processing:</strong> Performance varies significantly by local business hours</li>
+                <li><strong>US/CA business hour advantage:</strong> +5.6% and +6.3% respectively during 9-17 local time</li>
+            </ul>
+        </div>
+
+        <div class="pattern-list">
+            <h4>💱 Exchange Rate & Acceptance Rate Trends:</h4>
+            <ul>
+                <li><strong>CAD March-June trend:</strong> Consistent decline in both exchange rates (-2.6%) and acceptance rates from March through June</li>
+                <li><strong>EUR April-June trend:</strong> Sharp exchange rate decline (-21.2%) accompanied by acceptance rate degradation from April through June</li>
+            </ul>
+        </div>
+
+
+
+    </div>
+</body>
+</html>

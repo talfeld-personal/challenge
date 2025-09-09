@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Globepay API Specification</title>
+    <style>
+        h1 {
+            font-family: verdana;
+        }
+        h3 {
+            font-family: verdana;
+        }
+        p {
+            font-family: verdana;
+        }
+        li {
+            font-family: verdana;
+        }
+        code {
+            color: white;
+            background-color: black;
+            padding: 10px;
+            display: block;
+            white-space: pre-wrap;
+            font-family: monospace;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        body {
+            background-color: #f8fafc;
+            margin: 20px;
+            line-height: 1.6;
+        }
+        .parameter-list {
+            margin: 20px 0;
+        }
+        .parameter-list li {
+            margin: 10px 0;
+            list-style-type: disc;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Globepay API Specification</h1>
+    
+    <section>
+        <img src="https://www.letsdeel.com/flags.b00fa0d9.svg" width="500px" alt="Globepay Flags" />
+        <p>
+            Globepay is single and secure payment platform that lets you collect payments quickly from around the world in different currencies. 
+            It works across devices and is designed to increase your conversion.
+        </p>
+    </section>
+
+    <p>Globepay makes it easy to build a first-class global payments experience:</p>
+    
+    <ul>
+        <li><strong>Designed to remove friction</strong>&mdash;Real-time card validation with built-in error messaging</li>
+        <li><strong>Mobile-ready</strong>&mdash;Fully responsive design</li>
+        <li><strong>International</strong>&mdash;Supports 15 languages and multiple payment currencies</li>
+        <li><strong>Customization and branding</strong>&mdash;Customizable buttons and background color</li>
+        <li><strong>Fraud and compliance</strong>&mdash;Simplified PCI compliance and SCA-ready</li>
+        <li><strong>Additional features</strong>&mdash;Collect addresses, send email receipts, and more</li>
+    </ul>
+
+    <h3>API Reference</h3>
+
+    <p>
+        Send payment parameters (like amount, country, and currency) together with the input details collected from the customer to Globepay.
+    </p>
+
+    <h3>Payment Request Parameters</h3>
+
+    <ul class="parameter-list">
+        <li><b>amount</b> - The amount information for the transaction (in minor units).</li>
+        <li><b>currency</b> - The three-character ISO currency code.</li>
+        <li><b>paymentMethod</b> - The payment method used in the transaction.</li>
+        <li><b>type</b> - The type of payment method used in the transaction, e.g Visa</li>
+        <li><b>number</b> - The payment card number of payment method used in the transaction</li>
+        <li><b>expiryMonth</b> - The card expiry month. Format: 2 digits, zero-padded for single digits. For example: 03 = March, 11 = November</li>
+        <li><b>expiryYear</b> - The card expiry year. Format: 4 digits. For example: 2020</li>
+        <li><b>cardHolderName</b> - The cardholder name passed in the payment request.</li>
+        <li><b>CVC</b> - Card verification value. <i>optional but recommended</i></li>
+    </ul>
+
+    <h4>Example Request:</h4>
+    <code>{
+  "amount": {
+    "currency": "USD",
+    "value": 1000
+  },
+  "paymentMethod": {
+    "type": "scheme",
+    "number": "4111111111111111",
+    "expiryMonth": "03",
+    "expiryYear": "2030",
+    "holderName": "John Smith",
+    "cvc": "737"
+  },
+  "returnUrl": "https://your-company.com/...",
+  "merchantAccount": "YOUR_MERCHANT_ACCOUNT"
+}</code>
+
+    <h3>Payment Response Parameters</h3>
+
+    <p>
+        The response returns the result of the payment request:
+    </p>
+
+    <ul class="parameter-list">
+        <li><b>external_ref</b> - The external reference for the transaction.</li>
+        <li><b>date_time</b> - The timestamp of the transaction.</li>
+        <li><b>state</b> - The binary state of the transaction. For example: Accepted or Declined.</li>
+        <li><b>chargeback</b> - If the transaction has been chargedback. For example: True or False</li>
+        <li><b>amount</b> - The amount that has been charged from the card.</li>
+        <li><b>currency</b> - The three-character ISO currency code.</li>
+        <li><b>country</b> - The two-character ISO country code of the card.</li>
+        <li><b>rates</b> - The exchange rate used. Funds are settled to you in USD.</li>
+        <li><b>merchantReference</b> - Your order number</li>
+    </ul>
+
+    <h4>Example Response:</h4>
+    <code>Response code: 200. Success.
+
+{
+  "external_ref": "evt_1ESgcCOV7fY1ChY1MkZizZt",
+  "date_time": "2019-01-01T00:00:00.000Z",
+  "state": "ACCEPTED",
+  "chargeback": "FALSE",
+  "amount": 1000,
+  "currency": "USD",
+  "country": "US",
+  "rates": "{\"CAD\":1.415,\"EUR\":0.926,\"MXN\":25.103,\"USD\":1,\"SGD\":1.434,\"AUD\":1.648,\"GBP\":0.813}",
+  "merchantReference": "Your order number"
+}</code>
+
+    <footer>
+        <p>Globepay Inc. 2020</p>
+    </footer>
+
+</body>
+</html>
